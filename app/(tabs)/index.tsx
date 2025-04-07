@@ -1,74 +1,139 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { useState, useEffect } from 'react';
+import { View, Text, TextInput, ScrollView, StyleSheet } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
+import { useNavigation } from 'expo-router';
+import Button from '@/components/ui/Button';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+export default function ConverterScreen() {
+  const [inputValue, setInputValue] = useState('');
+  const [fromUnit, setFromUnit] = useState('kg');
+  const [toUnit, setToUnit] = useState('lbs');
+  const [result, setResult] = useState(0);
+  const navigation = useNavigation();
 
-export default function HomeScreen() {
+  // Conversion formulas
+  const convert = (value: number, from: string, to: string): number => {
+    const conversions: Record<string, Record<string, number>> = {
+      kg: { lbs: 2.20462 },
+      lbs: { kg: 1 / 2.20462 },
+      km: { miles: 0.621371 },
+      miles: { km: 1 / 0.621371 },
+      C: { F: (value * 9/5) + 32 },
+      F: { C: (value - 32) * 5/9 }
+    };
+    return value * (conversions[from]?.[to] || 0);
+  };
+
+  // Real-time calculation
+  useEffect(() => {
+    const value = parseFloat(inputValue) || 0;
+    setResult(convert(value, fromUnit, toUnit));
+  }, [inputValue, fromUnit, toUnit]);
+
+  // Save conversion to history
+  const saveConversion = () => {
+    navigation.navigate('history', {
+      newEntry: `${inputValue} ${fromUnit} → ${result.toFixed(2)} ${toUnit}`
+    });
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <ScrollView contentContainerStyle={styles.container}>
+      <Text style={styles.title}>Unit Converter</Text>
+      
+      <TextInput
+        style={styles.input}
+        placeholder="Enter value"
+        keyboardType="numeric"
+        value={inputValue}
+        onChangeText={setInputValue}
+      />
+
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={fromUnit}
+          onValueChange={setFromUnit}
+          style={[styles.picker, { color: 'white' }]} // Add this
+          dropdownIconColor="white" 
+        >
+          <Picker.Item label="Kilograms (kg)" value="kg" />
+          <Picker.Item label="Pounds (lbs)" value="lbs" />
+          <Picker.Item label="Kilometers (km)" value="km" />
+          <Picker.Item label="Miles" value="miles" />
+          <Picker.Item label="Celsius (°C)" value="C" />
+          <Picker.Item label="Fahrenheit (°F)" value="F" />
+        </Picker>
+
+        <Text style={styles.arrow}>→</Text>
+
+        <Picker
+          selectedValue={toUnit}
+          onValueChange={setToUnit}
+          style={[styles.picker, { color: 'white' }]} 
+          dropdownIconColor="white"
+        >
+          <Picker.Item label="Pounds (lbs)" value="lbs" />
+          <Picker.Item label="Kilograms (kg)" value="kg" />
+          <Picker.Item label="Miles" value="miles" />
+          <Picker.Item label="Kilometers (km)" value="km" />
+          <Picker.Item label="Fahrenheit (°F)" value="F" />
+          <Picker.Item label="Celsius (°C)" value="C" />
+        </Picker>
+      </View>
+
+      <Text style={styles.result}>
+        {result.toFixed(2)} {toUnit}
+      </Text>
+
+      <Button 
+        title="Save Conversion" 
+        onPress={saveConversion}
+        disabled={!inputValue}
+      />
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    padding: 20,
+    paddingBottom: 100
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: 'white' // White text
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#333',
+    borderRadius: 8,
+    padding: 15,
+    marginBottom: 20,
+    fontSize: 16,
+    color: 'white' // White text
+  },
+  pickerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    marginBottom: 20
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  picker: {
+    flex: 1,
+    height: 120,
+    backgroundColor: '#1E1E1E'
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  arrow: {
+    fontSize: 20,
+    marginHorizontal: 10
   },
+  result: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginVertical: 20,
+    color: 'white'
+  }
 });
