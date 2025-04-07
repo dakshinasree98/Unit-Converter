@@ -3,6 +3,7 @@ import { View, Text, TextInput, ScrollView, StyleSheet } from 'react-native';
 import { Picker } from '@react-native-picker/picker';
 import { useNavigation } from 'expo-router';
 import Button from '@/components/ui/Button';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function ConverterScreen() {
   const [inputValue, setInputValue] = useState('');
@@ -90,6 +91,69 @@ export default function ConverterScreen() {
         onPress={saveConversion}
         disabled={!inputValue}
       />
+    </ScrollView>
+  );
+}
+
+export default function Index() {
+  const [inputValue, setInputValue] = useState('');
+  const [fromUnit, setFromUnit] = useState('kg');
+  const [toUnit, setToUnit] = useState('lbs');
+  const [result, setResult] = useState(0);
+  const [history, setHistory] = useState<string[]>([]);
+
+  // Load history on component mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const savedHistory = await AsyncStorage.getItem('conversionHistory');
+        if (savedHistory) setHistory(JSON.parse(savedHistory));
+      } catch (error) {
+        console.error('Failed to load history', error);
+      }
+    };
+    loadHistory();
+  }, []);
+
+  // Save history whenever it changes
+  useEffect(() => {
+    const saveHistory = async () => {
+      try {
+        await AsyncStorage.setItem('conversionHistory', JSON.stringify(history));
+      } catch (error) {
+        console.error('Failed to save history', error);
+      }
+    };
+    if (history.length > 0) saveHistory();
+  }, [history]);
+
+  const convert = (value: number, from: string, to: string): number => {
+    if (from === 'kg' && to === 'lbs') return value * 2.20462;
+    if (from === 'lbs' && to === 'kg') return value / 2.20462;
+    if (from === 'km' && to === 'miles') return value * 0.621371;
+    if (from === 'miles' && to === 'km') return value / 0.621371;
+    return 0;
+  };
+
+  const handleConversion = () => {
+    const value = parseFloat(inputValue) || 0;
+    const convertedValue = convert(value, fromUnit, toUnit);
+    setResult(convertedValue);
+
+    const newEntry = `${value} ${fromUnit} → ${convertedValue.toFixed(2)} ${toUnit}`;
+    setHistory(prevHistory => [newEntry, ...prevHistory]); // Add new entry at beginning
+  };
+
+  return (
+    <ScrollView contentContainerStyle={styles.container}>
+      {/* ... (keep your existing UI code) ... */}
+      
+      <Text style={styles.historyTitle}>Conversion History</Text>
+      {history.map((item, index) => (
+        <Text key={index} style={styles.historyItem}>
+          {item}
+        </Text>
+      ))}
     </ScrollView>
   );
 }
